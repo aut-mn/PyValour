@@ -6,7 +6,7 @@ logs = AsyncLogCollector()
 node = None
 BaseAddress = "https://app.valour.gg/api/"
 
-async def retrieve_node(): # Return the node name, needed for an authenticated_request
+async def retrieve_node(): # Returns the node name, needed for an authenticated_request
     async with aiohttp.ClientSession() as main_session:
         try:
             async with main_session.request("GET", "https://app.valour.gg/api/node/name") as resp:
@@ -21,8 +21,9 @@ async def authenticated_request(method, url, token, **kwargs): # Returns the sta
     async with aiohttp.ClientSession(headers={"authorization": token, "x-server-select": node}) as main_session:
         try:
             async with main_session.request(method, BaseAddress + url, **kwargs) as resp:
-                print(resp)
-                return resp.status, resp.text
+                if 'application/json' in resp.headers.get('Content-Type', ''):
+                    return resp.status, await resp.json()
+                return resp.status, None
         except Exception as e:
             await logs.error(f"An unexpected error occurred during authenticated_request: {e}")
             return -1, -1

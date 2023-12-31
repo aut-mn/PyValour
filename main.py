@@ -1,5 +1,6 @@
 from AsyncLogger import AsyncLogCollector
 import valquest
+import asyncio
 
 # -- FRIENDS --
 # userfriends/add/{nameTag}  - Add friend
@@ -25,14 +26,42 @@ async def decline_friend(token:str, name:str, tag:str):
 async def remove_friend(token:str, name:str, tag:str):
     status = await valquest.authenticated_request("POST", f"userfriends/remove/{name}%23{tag}", token)
     if int(status[0]) == 200: return True
-    else: return False    
+    else: return False
+
+async def get_friend_data(token:str, userId:int): # Returns friend data JSON
+    status = await valquest.authenticated_request("GET", f"users/{userId}/frienddata", token)
+    if int(status[0]) == 200: return status[1]
+    else: return False
 
 # -- PLANETS --
 # planets/{planetId}/discover - Join planet
 # planets/discoverable  - Returns all discoverable planets
 # planets/{planetId}/invites  - Returns all active invites for the planet
+# planets/{planetId}/roles  - Returns all roles for the planet
 # users/self/planets  - Get all joined planets
 # users/self/planetIds  - Refresh joined planets
+async def get_joined_planets(token:str): # Returns joined planets JSON
+    status = await valquest.authenticated_request("GET", f"users/self/planets", token)
+    if int(status[0]) == 200: return status[1]
+    else: return False
+
+async def get_planet_roles(token:str, planetId:int): # Returns planet roles JSON
+    status = await valquest.authenticated_request("GET", f"planets/{planetId}/roles", token)
+    if int(status[0]) == 200: return status[1]
+    else: return False
+
+async def get_planet_channels(token:str, planetId:int): # Returns planet channels JSON
+    status = await valquest.authenticated_request("GET", f"planets/{planetId}/channels", token)
+    if int(status[0]) == 200: return status[1]
+    else: return False
+
+async def get_planet_members(token:str, planetId:int, pagination:int): # Returns planet members JSON, may be multiple pages but always starts with 0. All pages return at most 100 members.
+    status = await valquest.authenticated_request("GET", f"planets/{planetId}/memberinfo?page={pagination}", token)
+    if int(status[0]) == 200: return status[1]
+    else: return False
+
+# -- MEMBERS --
+# members/{userId}/roles  - Returns the Role ID for the specified user
 
 # -- SUBSCRIPTIONS --
 # subscriptions/{subscriptionType}/price  - Get the price of Valour subscription
@@ -44,6 +73,10 @@ async def remove_friend(token:str, name:str, tag:str):
 # notifications/self/unread/all  - Retrieve all unread notifications
 # notifications/self/{notificationId}/read/{booleanValue}  - Mark notification as read
 # notifications/self/clear  - Clear all notifications
+async def get_unread_notifications(token:str): # Returns unread notifs JSON
+    status = await valquest.authenticated_request("POST", f"self/unread/all", token)
+    if int(status[0]) == 200: return status[1]
+    else: return False 
 
 # -- MESSAGES --
 # channels/{channelId}/typing  - Show that you're typing
@@ -59,6 +92,11 @@ async def show_typing(token:str, channelId:int):
     if int(status[0]) == 200: return True
     else: return False 
 
+async def get_direct_messages(token:str): # Returns DMs JSON
+    status = await valquest.authenticated_request("GET", f"channels/direct/self", token)
+    if int(status[0]) == 200: return status[1]
+    else: return False 
+
 # -- TENOR --
 # users/self/tenorfavorites  - Get all favorited Tenor GIFs
 
@@ -67,6 +105,11 @@ async def show_typing(token:str, channelId:int):
 # users/token  - Get authenticated Valour user token
 # users/self  - Get the authenticated user 
 # users/self/referrals  - Get referrals
+
+async def get_authenticated_user(token:str): # Returns authenticated json
+    status = await valquest.authenticated_request("GET", f"users/self", token)
+    if int(status[0]) == 200: return status[1]
+    else: return False
 
 
 # -- NODES --
