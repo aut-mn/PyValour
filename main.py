@@ -1,16 +1,31 @@
-import asyncio, aiohttp
 from AsyncLogger import AsyncLogCollector
-
-BaseAddress = "https://app.valour.gg/api/"
-
-
-# API endpoints
+import valquest
 
 # -- FRIENDS --
 # userfriends/add/{nameTag}  - Add friend
 # userfriends/cancel/{nameTag}  - Cancel outgoing friend request
 # userfriends/decline/{nameTag}  - Decline friend request
 # userfriends/remove/{nameTag}  - Remove a friend
+
+async def add_friend(token:str, name:str, tag:str):
+    status = await valquest.authenticated_request("POST", f"userfriends/add/{name}%23{tag}", token)
+    if int(status[0]) == 201: return True
+    else: return False
+
+async def cancel_friend(token:str, name:str, tag:str):
+    status = await valquest.authenticated_request("POST", f"userfriends/cancel/{name}%23{tag}", token)
+    if int(status[0]) == 200: return True
+    else: return False
+
+async def decline_friend(token:str, name:str, tag:str):
+    status = await valquest.authenticated_request("POST", f"userfriends/decline/{name}%23{tag}", token)
+    if int(status[0]) == 200: return True
+    else: return False
+
+async def remove_friend(token:str, name:str, tag:str):
+    status = await valquest.authenticated_request("POST", f"userfriends/remove/{name}%23{tag}", token)
+    if int(status[0]) == 200: return True
+    else: return False    
 
 # -- PLANETS --
 # planets/{planetId}/discover - Join planet
@@ -31,12 +46,18 @@ BaseAddress = "https://app.valour.gg/api/"
 # notifications/self/clear  - Clear all notifications
 
 # -- MESSAGES --
+# channels/{channelId}/typing  - Show that you're typing
 # channels/direct/self  - Get all active Direct Message channels
-# channels/{ChannelId}/messages  - Get all messages sent to a channel
+# channels/{channelId}/messages  - Get all messages sent to a channel
 # channels/{channelId}  - Send a message to the specified channel
 # channels/{channelId}/messages/{messageId}  - Edit a message
 # channels/{channelId}/messages/{messageId}  - Delete a message
 # users/self/statedata  - Retrieve channel states
+
+async def show_typing(token:str, channelId:int):
+    status = await valquest.authenticated_request("POST", f"channels/{channelId}/typing", token)
+    if int(status[0]) == 200: return True
+    else: return False 
 
 # -- TENOR --
 # users/self/tenorfavorites  - Get all favorited Tenor GIFs
