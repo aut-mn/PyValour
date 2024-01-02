@@ -1,13 +1,16 @@
 # This is the main library you import
 from AsyncLogger import AsyncLogCollector
 import valquest
-import asyncio
+import datetime
+import random
+import hashlib
 
 # -- FRIENDS --
 # userfriends/add/{nameTag}  - Add/accept friend
 # userfriends/cancel/{nameTag}  - Cancel outgoing friend request
 # userfriends/decline/{nameTag}  - Decline friend request
 # userfriends/remove/{nameTag}  - Remove a friend
+# users/{userId}/frienddata  - Retrieve incoming/outgoing/current friends
 async def add_friend(token:str, name:str, tag:str):
     status = await valquest.authenticated_request("POST", f"userfriends/add/{name}%23{tag}", token)
     if int(status[0]) == 201: return True
@@ -35,6 +38,7 @@ async def get_friend_data(token:str, userId:int): # Returns friend data JSON
 
 # -- PLANETS --
 # planets/{planetId}/discover - Join planet
+# planets/{planetId}  - Update a planet
 # planets/discoverable  - Returns all discoverable planets
 # planets/{planetId}/invites  - Returns all active invites for the planet
 # planets/{planetId}/roles  - Returns all roles for the planet
@@ -57,6 +61,11 @@ async def get_planet_channels(token:str, planetId:int): # Returns planet channel
 
 async def get_planet_members(token:str, planetId:int, pagination:int): # Returns planet members JSON, may be multiple pages but always starts with 0. All pages return at most 100 members.
     status = await valquest.authenticated_request("GET", f"planets/{planetId}/memberinfo?page={pagination}", token)
+    if int(status[0]) == 200: return status[1]
+    else: return False
+
+async def update_planet(token:str, planetId:int, ownerId:int, description:str, discoverable:bool, iconUrl, name:str, public:bool, nsfw:bool): # If 200, returns pretty much the same data put in
+    status = await valquest.authenticated_request("PUT", f"planets/{planetId}", token, json={"baseRoute":"api/planets","ownerId":ownerId,"name":name,"iconUrl":iconUrl,"description":description,"public":public,"discoverable":discoverable,"nsfw":nsfw,"id":planetId})
     if int(status[0]) == 200: return status[1]
     else: return False
 
@@ -101,14 +110,36 @@ async def get_direct_messages(token:str): # Returns DMs JSON
     if int(status[0]) == 200: return status[1]
     else: return False 
 
+async def delete_message(token:str, channelId:int, messageId:int):
+    status = await valquest.authenticated_request("DELETE", f"channels/{channelId}/messages/{messageId}", token)
+    if int(status[0]) == 200: return status[1]
+    else: return False
+
+async def send_text_message(token:str, channelId:int, planetId, authorMemberId, message:str): # Returns status & fingerprint
+    try:
+        selfId = await get_authenticated_user(token)
+        if selfId: selfId = selfId['id']
+        else: return False
+        current_time = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+        # unique_fingerprint may look intimidating, but all it does is multiplies the current time to the selfId, generates a random number between 0 and the sum of that, and adds the channelId then the result is hashed
+        unique_fingerprint = random.randint(0, int(str(selfId) + str(int(datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S%f')[:-3])))) if isinstance(selfId, int) and isinstance(int(datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S%f')[:-3]), int) and channelId else None
+        hashed_fingerprint = hashlib.sha256(str(unique_fingerprint).encode()).hexdigest() if unique_fingerprint is not None else None
+        status = await valquest.authenticated_request("POST", f"channels/{channelId}/messages", token, json={"baseRoute":f"api/channels/{channelId}/messages","planetId":int(planetId),"replyToId":None,"authorUserId":selfId,"authorMemberId":int(authorMemberId),"content":message,"timeSent":current_time,"channelId":channelId,"embedData":None,"mentionsData":None,"attachmentsData":None,"fingerprint":hashed_fingerprint,"editedTime":None,"renderKey":None,"replyTo":None,"mentions":None,"embed":None,"attachments":None,"id":channelId})
+        if int(status[0]) == 200: return True, hashed_fingerprint
+        else: return False, hashed_fingerprint
+    except Exception as e:
+        return False, e
+
 # -- TENOR --
-# users/self/tenorfavorites  - Get all favorited Tenor GIFs
+# users/self/tenorfavorites  - Add favorite GIF
+# users/self/tenorfavorites/{GIFId}  - DEKETE, remove a favorite GIF
 
 # -- SELF --
 # users/self/compliance/{birthday}/{locality}  - Set the locality and birthday for the user
 # users/token  - Create a new token from an email & password
 # users/self  - Get the authenticated user 
 # users/self/referrals  - Get referrals
+# users/register  - Create an account
 async def create_session(email:str, password:str): # Creates a session and returns a token and userId
     status = await valquest.authenticated_request("POST", f"users/token", token=None, json={"email":email,"password":password})
     if int(status[0]) == 200: return status[1]['id'], status[1]['userId']
@@ -144,4 +175,4 @@ async def create_account(username:str, email:str, password:str, DoB:str, referre
 
 # -- MODERATION --
 # bans (IssuerId), (PlanetId), (TargetId), (Reason), (TimeCreated), (TimeExpires, null = perma)  - Issue a ban
-# users/self/hardDelete  - Delete the authenticated user
+# users/self/hardDelete  - Delete the authenticated user'
