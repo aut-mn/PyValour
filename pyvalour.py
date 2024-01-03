@@ -2,8 +2,6 @@
 from AsyncLogger import AsyncLogCollector
 import valquest
 import datetime
-import random
-import hashlib
 
 # -- FRIENDS --
 # userfriends/add/{nameTag}  - Add/accept friend
@@ -121,9 +119,7 @@ async def send_text_message(token:str, channelId:int, planetId, authorMemberId, 
         if selfId: selfId = selfId['id']
         else: return False
         current_time = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-        # unique_fingerprint may look intimidating, but all it does is multiplies the current time to the selfId, generates a random number between 0 and the sum of that, and adds the channelId then the result is hashed
-        unique_fingerprint = random.randint(0, int(str(selfId) + str(int(datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S%f')[:-3])))) if isinstance(selfId, int) and isinstance(int(datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S%f')[:-3]), int) and channelId else None
-        hashed_fingerprint = hashlib.sha256(str(unique_fingerprint).encode()).hexdigest() if unique_fingerprint is not None else None
+        hashed_fingerprint = await valquest.generate_unique_fingerprint(selfId, channelId)
         status = await valquest.authenticated_request("POST", f"channels/{channelId}/messages", token, json={"baseRoute":f"api/channels/{channelId}/messages","planetId":int(planetId),"replyToId":None,"authorUserId":selfId,"authorMemberId":int(authorMemberId),"content":message,"timeSent":current_time,"channelId":channelId,"embedData":None,"mentionsData":None,"attachmentsData":None,"fingerprint":hashed_fingerprint,"editedTime":None,"renderKey":None,"replyTo":None,"mentions":None,"embed":None,"attachments":None,"id":channelId})
         if int(status[0]) == 200: return True, hashed_fingerprint
         else: return False, hashed_fingerprint
@@ -175,4 +171,4 @@ async def create_account(username:str, email:str, password:str, DoB:str, referre
 
 # -- MODERATION --
 # bans (IssuerId), (PlanetId), (TargetId), (Reason), (TimeCreated), (TimeExpires, null = perma)  - Issue a ban
-# users/self/hardDelete  - Delete the authenticated user'
+# users/self/hardDelete  - Delete the authenticated user
